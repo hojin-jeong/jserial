@@ -1,0 +1,39 @@
+{
+  "name": "jserial",
+  "version": "0.0.1",
+  "description": "Fast JSON Serializer",
+  "main": "lib/jserial.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "json",
+    "serializer",
+    "json-serializer",
+    "lz4",
+    "msgpack"
+  ],
+  "homepage": "https://github.com/hojin-jeong/jserial",
+  "bugs": {
+    "url": "https://github.com/hojin-jeong/jserial/issues",
+    "email": "a66764765@gmail.com"
+  },
+  "author": {
+    "name": "hojin.jeong",
+    "email": "a66764765@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hojin-jeong/jserial.git"
+  },
+  "engines": {
+    "node": ">=6"
+  },
+  "dependencies": {
+    "lz4": "0.6.3",
+    "msgpackr": "^1.1.0"
+  }
+}
