@@ -1,6 +1,6 @@
 {
   "name": "jserial",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Fast JSON Serializer",
   "main": "lib/jserial.js",
   "directories": {
@@ -30,10 +30,9 @@
     "url": "https://github.com/hojin-jeong/jserial.git"
   },
   "engines": {
-    "node": ">=6"
+    "node": ">=12"
   },
   "dependencies": {
-    "lz4": "^0.6.5",
-    "msgpackr": "^1.9.8"
+    "msgpackr": "^1.9.9"
   }
 }
