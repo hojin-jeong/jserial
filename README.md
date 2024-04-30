@@ -33,6 +33,24 @@ if (deserialized instanceof Error) {
 }
 ```
 
+## Msgpack Custom Extension
+```javascript
+const JSONSerializer = require("jserial");
+class CustomClass {};
+JSONSerializer.addExtension({
+    class: CustomClass,
+    type: 1, // 1 ~ 100
+    read(instance) {
+        return instance.customData;
+    },
+    write(data) {
+        const customClass = new CustomClass();
+        customClass.customData = data;
+        return customClass;
+    }
+});
+```
+
 ## Using Msgpackr Dictionary
 
 ```javascript
