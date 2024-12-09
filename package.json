@@ -1,6 +1,6 @@
 {
   "name": "jserial",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Fast JSON Serializer",
   "main": "lib/jserial.js",
   "directories": {
@@ -33,6 +33,6 @@
     "node": ">=12"
   },
   "dependencies": {
-    "msgpackr": "^1.11.0"
+    "msgpackr": "^1.11.2"
   }
 }
