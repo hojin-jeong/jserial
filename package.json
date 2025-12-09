@@ -1,8 +1,19 @@
 {
   "name": "jserial",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Fast JSON Serializer",
   "main": "lib/jserial.js",
+  "files": [
+    "lib",
+    "license.md",
+    "README.md"
+  ],
+  "browser": {
+    "./lib/platform/index.js": "./lib/platform/browser.js",
+    "fs": false,
+    "os": false,
+    "path": false
+  },
   "directories": {
     "lib": "lib"
   },
@@ -30,7 +41,7 @@
     "url": "https://github.com/hojin-jeong/jserial.git"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=16"
   },
   "dependencies": {
     "msgpackr": "1.11.5"

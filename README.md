@@ -15,6 +15,22 @@
 
 ```shell
 npm install jserial --save
+# or
+yarn add jserial
+```
+
+## Browser Support
+
+This library is compatible with modern browsers and module bundlers (Webpack, Rspack, Vite, etc.).
+It handles platform-specific dependencies internally, so you don't need extensive polyfill configurations.
+
+Simply import and use it in your project:
+
+```javascript
+import JsonSerializer from 'jserial';
+
+const serializer = new JsonSerializer();
+// ...
 ```
 
 ## Basic Usage
@@ -82,22 +98,33 @@ const deserialized = serializer.deserializeSimple(serialized);
 ## Benchmark
 
 ```bash
-Node Version: v20.9.0
+Node Version: v24.11.1
+Benchmark JSON Size: 471,349 bytes
 Repeated 50 times
------------------------Benchmark JSON Size: 488,002 bytes-----------------------
-JSON.stringify                / CompressedSize:  488,002bytes (100.00%), Serialize:   1.14 ms, Deserialize:  1.08 ms
-@msgpack/msgpack              / CompressedSize:  424,096bytes  (86.90%), Serialize:   2.02 ms, Deserialize:  2.76 ms
-msgpack5                      / CompressedSize:  424,096bytes  (86.90%), Serialize:  23.64 ms, Deserialize:   9.2 ms
-Msgpackr                      / CompressedSize:  426,578bytes  (87.41%), Serialize:   1.26 ms, Deserialize:  1.84 ms
-JSON.stringify with Snappy    / CompressedSize:  155,540bytes  (31.87%), Serialize:    2.5 ms, Deserialize:   1.9 ms
-Msgpackr with Snappy          / CompressedSize:  150,903bytes  (30.92%), Serialize:   1.52 ms, Deserialize:  1.88 ms
-JSON.stringify with Brotli    / CompressedSize:   15,537bytes   (3.18%), Serialize:  90.16 ms, Deserialize:  2.64 ms
-JSON.stringify with Inflate   / CompressedSize:   98,075bytes  (20.10%), Serialize:   8.64 ms, Deserialize:  2.72 ms
-JSON.stringify with Gzip      / CompressedSize:   98,087bytes  (20.10%), Serialize:   8.74 ms, Deserialize:   2.6 ms
-CBOR                          / CompressedSize:  423,927bytes  (86.87%), Serialize:  16.44 ms, Deserialize: 16.68 ms
-Encodr MSGPACK                / CompressedSize:  424,096bytes  (86.90%), Serialize:   2.92 ms, Deserialize:  6.42 ms
-Encodr JSON                   / CompressedSize:  488,002bytes (100.00%), Serialize:   1.24 ms, Deserialize:   1.1 ms
-jserial                       / CompressedSize:   49,235bytes  (10.09%), Serialize:   1.14 ms, Deserialize:  0.58 ms
-jserial simple                / CompressedSize:  122,747bytes  (25.15%), Serialize:   1.22 ms, Deserialize:  0.56 ms
 --------------------------------------------------------------------------------
+| Library | Size | Ratio | Serialize | Deserialize |
+| :--- | ---: | ---: | ---: | ---: |
+| JSON.stringify | 471,349 B | 100.00% | 1.84 ms | 1.61 ms |
+| @msgpack/msgpack | 420,399 B | 89.19% | 2.47 ms | 1.53 ms |
+| msgpack5 | 420,399 B | 89.19% | 13.54 ms | 7.70 ms |
+| msgpack-lite | 420,399 B | 89.19% | 2.21 ms | 6.38 ms |
+| Msgpackr | 424,399 B | 90.04% | 0.86 ms | 1.28 ms |
+| JSON + Snappy | 51,467 B | 10.92% | 2.01 ms | 1.65 ms |
+| Msgpackr + Snappy | 40,083 B | 8.50% | 0.89 ms | 1.43 ms |
+| JSON + Gzip | 21,120 B | 4.48% | 4.00 ms | 2.23 ms |
+| JSON + Brotli | 13,461 B | 2.86% | 945.98 ms | 2.06 ms |
+| JSON + Zstd (Native) | 17,823 B | 3.78% | 1.93 ms | 1.87 ms |
+| JSON + Inflate | 21,108 B | 4.48% | 4.03 ms | 1.76 ms |
+| Encodr MSGPACK | 420,399 B | 89.19% | 2.01 ms | 6.34 ms |
+| **jserial** | **27,921 B** | **5.92%** | **1.59 ms** | **0.53 ms** |
+| **jserial simple** | **28,749 B** | **6.10%** | **1.56 ms** | **0.48 ms** |
 ```
+
+### Summary
+*   **Compression Ratio**: Brotli (2.86%) > Zstd (3.78%) > Gzip (4.48%) > **jserial (5.92%)** > Snappy (10.92%)
+    *   `jserial` provides excellent compression, outperforming Snappy significantly and coming close to Gzip.
+*   **Deserialization Speed**: **jserial (0.53 ms)** > Msgpackr (1.28 ms) > Zstd (1.87 ms) > Gzip (2.23 ms)
+    *   `jserial` is **3x faster** than Zstd/Gzip and **2.4x faster** than Msgpackr in reading data.
+*   **Serialization Speed**: Msgpackr (0.86 ms) > **jserial (1.59 ms)** > Zstd (1.93 ms) > Gzip (4.00 ms)
+    *   `jserial` offers balanced write performance, faster than native Zstd and Gzip.
+
