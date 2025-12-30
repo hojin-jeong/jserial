@@ -95,6 +95,67 @@ const serialized = serializer.serializeSimple(json);
 const deserialized = serializer.deserializeSimple(serialized);
 ```
 
+## Stream Framing
+
+For TCP sockets, WebSockets, or other stream-based communication, use `FrameStream` to handle message framing automatically.
+
+### Node.js (Native Streams)
+
+```javascript
+const JsonSerializer = require("jserial");
+const net = require("net");
+
+const serializer = new JsonSerializer();
+const socket = net.connect({ port: 8080 });
+
+// Create FrameStream from duplex stream
+const frame = JsonSerializer.createFrameStream(serializer, socket);
+
+// Read a message
+const message = await frame.read();
+
+// Write a message
+await frame.write({ hello: "world" });
+
+// Write multiple messages efficiently (batch)
+await frame.writeV([
+  { id: 1, data: "first" },
+  { id: 2, data: "second" },
+  { id: 3, data: "third" },
+]);
+```
+
+### Browser (WhatWG Streams)
+
+```javascript
+import JsonSerializer from "jserial";
+
+const serializer = new JsonSerializer();
+
+// For WebTransport, fetch streams, etc.
+const frame = JsonSerializer.createFrameStream(serializer, readable, writable);
+
+// Same API as Node.js
+const message = await frame.read();
+await frame.write({ hello: "world" });
+await frame.writeV([obj1, obj2, obj3]);
+
+// Clean up
+frame.close();
+```
+
+### API Reference
+
+| Method | Description |
+| :--- | :--- |
+| `JsonSerializer.createFrameStream(serializer, stream)` | Create FrameStream for Node.js duplex stream |
+| `JsonSerializer.createFrameStream(serializer, readable, writable)` | Create FrameStream for Browser streams |
+| `frame.read()` | Read next deserialized message (Promise) |
+| `frame.write(data)` | Write single message (Promise) |
+| `frame.writeV(dataArray)` | Write multiple messages in batch - more efficient (Promise) |
+| `frame.unwrap()` | Get underlying stream (Node.js only) |
+| `frame.close()` | Release stream resources (Browser only) |
+
 ## Benchmark
 
 ```bash
