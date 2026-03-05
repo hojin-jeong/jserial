@@ -171,26 +171,26 @@ frame.close();
 
 ```bash
 Node Version: v24.11.1
-Benchmark JSON Size: 471,337 bytes
+Benchmark JSON Size: 471,310 bytes
 Repeated 50 times
 --------------------------------------------------------------------------------
 | Library | Size | Ratio | Serialize | Deserialize |
 | :--- | ---: | ---: | ---: | ---: |
-| JSON.stringify | 471,337 B | 100.00% | 1.92 ms | 1.70 ms |
-| @msgpack/msgpack | 420,399 B | 89.19% | 2.75 ms | 1.61 ms |
-| Msgpackr | 424,399 B | 90.04% | 0.95 ms | 1.34 ms |
-| JSON + Gzip | 21,110 B | 4.48% | 3.98 ms | 1.99 ms |
-| JSON + Brotli | 13,403 B | 2.84% | 952.35 ms | 2.06 ms |
-| JSON + Zstd (Native) | 17,581 B | 3.73% | 1.78 ms | 1.93 ms |
-| JSON + Inflate | 21,098 B | 4.48% | 3.98 ms | 1.84 ms |
-| **jserial** | **23,826 B** | **5.05%** | **0.98 ms** | **0.86 ms** |
-| **jserial (view)** | **23,826 B** | **5.05%** | **0.84 ms** | **0.04 ms** |
+| JSON.stringify | 471,310 B | 100.00% | 1.89 ms | 1.66 ms |
+| @msgpack/msgpack | 420,399 B | 89.20% | 2.87 ms | 1.67 ms |
+| Msgpackr | 424,399 B | 90.05% | 0.94 ms | 1.33 ms |
+| JSON + Gzip | 21,123 B | 4.48% | 4.15 ms | 2.13 ms |
+| JSON + Brotli | 13,444 B | 2.85% | 951.27 ms | 2.16 ms |
+| JSON + Zstd (Native) | 17,862 B | 3.79% | 1.86 ms | 1.99 ms |
+| JSON + Inflate | 21,111 B | 4.48% | 3.94 ms | 1.93 ms |
+| **jserial** | **24,149 B** | **5.12%** | **0.97 ms** | **0.87 ms** |
+| **jserial (view)** | **24,149 B** | **5.12%** | **0.86 ms** | **0.04 ms** |
 ```
 
 ### Summary
-*   **Compression Ratio**: Brotli (2.84%) > Zstd (3.73%) > Gzip/Inflate (4.48%) > **jserial (5.05%)**
+*   **Compression Ratio**: Brotli (2.85%) > Zstd (3.79%) > Gzip/Inflate (4.48%) > **jserial (5.12%)**
     *   `jserial` provides excellent compression close to Gzip level while being dramatically faster.
-*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.86 ms) > Msgpackr (1.34 ms) > JSON.parse (1.70 ms)
-    *   `jserial (view)` is **42x faster** than JSON.parse — zero-copy deserialization eliminates buffer allocation entirely.
-*   **Serialization Speed**: **jserial view (0.84 ms)** > Msgpackr (0.95 ms) > jserial (0.98 ms) > JSON.stringify (1.92 ms)
-    *   `jserial (view)` is the fastest serializer, beating even Msgpackr while achieving 18x better compression.
+*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.87 ms) > Msgpackr (1.33 ms) > JSON.parse (1.66 ms)
+    *   `jserial (view)` is **41x faster** than JSON.parse — zero-copy deserialization eliminates buffer allocation entirely.
+*   **Serialization Speed**: **jserial view (0.86 ms)** > Msgpackr (0.94 ms) > jserial (0.97 ms) > JSON.stringify (1.89 ms)
+    *   `jserial (view)` is the fastest serializer, beating even Msgpackr while achieving 19x better compression.
