@@ -94,8 +94,8 @@ try {
     console.warn('   💡 wasm-opt 설치: npm install -g wasm-opt 또는 binaryen 패키지')
   }
 
-  // 4. Base64 JS 파일 생성
-  console.log('\n📝 4. Base64 JS 파일 생성 중...')
+  // 4-1. Non-SIMD Base64 JS 파일 생성
+  console.log('\n📝 4-1. Non-SIMD Base64 JS 파일 생성 중...')
   
   const wasmBinary = readFileSync(wasmOutputPath)
   const base64String = wasmBinary.toString('base64')
@@ -107,10 +107,27 @@ try {
   }
   
   writeFileSync(jsOutputPath, jsContent)
-  writeFileSync(jsSimdOutputPath, jsContent)
-  
-  console.log(`   ✓ ${jsOutputPath}`)
-  console.log(`   ✓ ${jsSimdOutputPath}`)
+  console.log(`   ✓ ${jsOutputPath} (non-SIMD)`)
+  // 4-2. SIMD WASM 빌드
+  console.log('\n📦 4-2. SIMD WASM 빌드 중...')
+  runCommand('cargo build --target wasm32-unknown-unknown --release', { 
+    cwd: lz4Dir,
+    env: { ...process.env, RUSTFLAGS: '-C target-feature=+simd128' }
+  })
+  console.log('   ✓ SIMD WASM 빌드 완료')
+
+  // SIMD wasm-opt 최적화 (선택적)
+  if (commandExists('wasm-opt')) {
+    runCommand(`wasm-opt -O3 --enable-simd "${wasmOutputPath}" -o "${wasmOutputPath}"`)
+    console.log('   ✓ SIMD wasm-opt 최적화 완료')
+  }
+
+  // SIMD Base64 JS 파일 생성
+  const wasmSimdBinary = readFileSync(wasmOutputPath)
+  const simdBase64String = wasmSimdBinary.toString('base64')
+  const jsSimdContent = `module.exports = '${simdBase64String}'\n`
+  writeFileSync(jsSimdOutputPath, jsSimdContent)
+  console.log(`   ✓ ${jsSimdOutputPath} (SIMD)`)
 
   // 5. 빌드 아티팩트 정리
   console.log('\n🧹 5. 빌드 아티팩트 정리 중...')
@@ -129,8 +146,10 @@ try {
   // 6. 결과 보고
   console.log('\n✅ 빌드 완료!\n')
   console.log('📊 파일 크기:')
-  console.log(`   WASM 원본: ${formatBytes(wasmBinary.length)}`)
-  console.log(`   Base64 JS: ${formatBytes(Buffer.byteLength(jsContent))}`)
+  console.log(`   WASM (non-SIMD): ${formatBytes(wasmBinary.length)}`)
+  console.log(`   WASM (SIMD):     ${formatBytes(wasmSimdBinary.length)}`)
+  console.log(`   Base64 JS:       ${formatBytes(Buffer.byteLength(jsContent))}`)
+  console.log(`   Base64 SIMD JS:  ${formatBytes(Buffer.byteLength(jsSimdContent))}`)
   console.log(`   압축 비율: ${((Buffer.byteLength(jsContent) / wasmBinary.length) * 100).toFixed(1)}%\n`)
 
 } catch (error) {

@@ -1,8 +1,12 @@
 {
   "name": "jserial",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Fast JSON Serializer",
   "main": "lib/jserial.js",
+  "exports": {
+    ".": "./lib/jserial.js",
+    "./lz4": "./lib/lz4.js"
+  },
   "files": [
     "lib",
     "license.md",
