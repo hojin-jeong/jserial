@@ -7,13 +7,19 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 // ─── 기존 함수들 (Reference lz4.rs 기반) ────────────────────────────────────
 
 /// LZ4 블록 압축 (입력 소유권 이전 → WASM 내부에서 해제됨)
-#[no_mangle]
+///
+/// @deprecated compress_raw_into 사용 권장. 입력 소유권을 이전하므로 비효율적.
+#[allow(deprecated)]
+#[deprecated(note = "use compress_raw_into instead")]
 pub extern "C" fn compress_raw(ptr: ffi::mem::buf, len: usize) -> ffi::mem::buf {
     ffi::io::store(lz4_flex::compress(&ffi::io::load(ptr, len)))
 }
 
 /// LZ4 블록 해제 (size = 원본 크기)
-#[no_mangle]
+///
+/// @deprecated decompress_raw_into 사용 권장.
+#[allow(deprecated)]
+#[deprecated(note = "use decompress_raw_into instead")]
 pub extern "C" fn decompress_raw(size: usize, ptr: ffi::mem::buf, len: usize) -> ffi::mem::buf {
     match lz4_flex::decompress(&ffi::io::load(ptr, len), size) {
         Err(_) => ffi::ptr::err(0),
@@ -34,10 +40,10 @@ pub unsafe extern "C" fn compress_raw_into(
     dst_ptr: *mut u8,
     dst_len: usize,
 ) -> usize {
-    if src_len > 0 && src_ptr.is_null() {
+    if src_ptr.is_null() || dst_ptr.is_null() {
         return 0;
     }
-    if dst_len > 0 && dst_ptr.is_null() {
+    if src_len == 0 {
         return 0;
     }
     let src = std::slice::from_raw_parts(src_ptr, src_len);
@@ -59,10 +65,10 @@ pub unsafe extern "C" fn decompress_raw_into(
     dst_ptr: *mut u8,
     dst_len: usize,
 ) -> usize {
-    if src_len > 0 && src_ptr.is_null() {
+    if src_ptr.is_null() || dst_ptr.is_null() {
         return 0;
     }
-    if dst_len > 0 && dst_ptr.is_null() {
+    if src_len == 0 {
         return 0;
     }
     let src = std::slice::from_raw_parts(src_ptr, src_len);
@@ -109,10 +115,10 @@ pub unsafe extern "C" fn compress_with_header(
     dst_ptr: *mut u8,
     dst_len: usize,
 ) -> usize {
-    if src_len > 0 && src_ptr.is_null() {
+    if src_ptr.is_null() || dst_ptr.is_null() {
         return 0;
     }
-    if dst_len > 0 && dst_ptr.is_null() {
+    if src_len == 0 {
         return 0;
     }
     let src = std::slice::from_raw_parts(src_ptr, src_len);
@@ -141,5 +147,10 @@ pub unsafe extern "C" fn compress_with_header(
     write_uint_be(&mut dst[header_start + 2 + n0..], s1, n1);
 
     // Pack both values into return: (total_size << 5) | header_start
-    ((header_size + s1) << 5) | header_start
+    // 32비트 packed return 오버플로우 방지 (~128MB 제한)
+    let total_size = header_size + s1;
+    if total_size > 0x07FF_FFFF {
+        return 0;
+    }
+    (total_size << 5) | header_start
 }

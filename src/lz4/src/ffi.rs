@@ -1,5 +1,8 @@
 pub mod mem {
     pub type buf = *mut u8;
+    // SAFETY: WASM은 단일 스레드이므로 data race 없음.
+    // 이 전역 변수는 레거시 compress_raw/decompress_raw 전용.
+    // 신규 _into API에서는 사용하지 않음.
     static mut LEN: usize = 0;
     pub fn length() -> usize {
         unsafe { LEN }
@@ -11,17 +14,21 @@ pub mod mem {
         if size == 0 {
             return std::ptr::null_mut();
         }
-        unsafe {
-            let layout = std::alloc::Layout::from_size_align_unchecked(size, 1);
-            std::alloc::alloc(layout)
-        }
+        let layout = match std::alloc::Layout::from_size_align(size, 1) {
+            Ok(l) => l,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        unsafe { std::alloc::alloc(layout) }
     }
     pub fn free(ptr: *mut u8, size: usize) {
         if ptr.is_null() || size == 0 {
             return;
         }
+        let layout = match std::alloc::Layout::from_size_align(size, 1) {
+            Ok(l) => l,
+            Err(_) => return,
+        };
         unsafe {
-            let layout = std::alloc::Layout::from_size_align_unchecked(size, 1);
             std::alloc::dealloc(ptr, layout);
         }
     }
@@ -34,6 +41,9 @@ pub mod ptr {
 pub mod io {
     use super::mem;
     pub fn load(ptr: *mut u8, size: usize) -> Vec<u8> {
+        if ptr.is_null() || size == 0 {
+            return Vec::new();
+        }
         unsafe {
             let boxed = Box::from_raw(std::slice::from_raw_parts_mut(ptr, size));
             boxed.into_vec()
