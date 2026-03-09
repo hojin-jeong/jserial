@@ -87,7 +87,7 @@ try {
   console.log('\n⚡ 3. WASM 최적화 중...')
   
   if (commandExists('wasm-opt')) {
-    runCommand(`wasm-opt -O3 "${wasmOutputPath}" -o "${wasmOutputPath}"`)
+    runCommand(`wasm-opt -O3 --enable-bulk-memory "${wasmOutputPath}" -o "${wasmOutputPath}"`)
     console.log('   ✓ wasm-opt 최적화 완료')
   } else {
     console.log('   ⚠ wasm-opt를 찾을 수 없습니다. 최적화를 건너뜁니다.')
@@ -118,7 +118,7 @@ try {
 
   // SIMD wasm-opt 최적화 (선택적)
   if (commandExists('wasm-opt')) {
-    runCommand(`wasm-opt -O3 --enable-simd "${wasmOutputPath}" -o "${wasmOutputPath}"`)
+    runCommand(`wasm-opt -O3 --enable-bulk-memory --enable-simd "${wasmOutputPath}" -o "${wasmOutputPath}"`)
     console.log('   ✓ SIMD wasm-opt 최적화 완료')
   }
 
