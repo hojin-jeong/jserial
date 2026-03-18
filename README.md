@@ -160,6 +160,7 @@ frame.close();
 | `JsonSerializer.createFrameStream(serializer, stream)` | Create FrameStream for Node.js duplex stream |
 | `JsonSerializer.createFrameStream(serializer, readable, writable)` | Create FrameStream for Browser streams |
 | `frame.read()` | Read next deserialized message (Promise) |
+| `frame.readV(count)` | Read multiple messages in batch - more efficient when buffered (Promise<Array>) |
 | `frame.write(data)` | Write single message (Promise) |
 | `frame.writeV(dataArray)` | Write multiple messages in batch - more efficient (Promise) |
 | `frame.unwrap()` | Get underlying stream (Node.js only) |

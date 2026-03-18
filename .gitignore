@@ -5,3 +5,5 @@ test
 package-lock.json
 yarn.lock
 docs
+src/lz4/target/
+src/lz4/Cargo.lock
