@@ -160,7 +160,7 @@ frame.close();
 | `JsonSerializer.createFrameStream(serializer, stream)` | Create FrameStream for Node.js duplex stream |
 | `JsonSerializer.createFrameStream(serializer, readable, writable)` | Create FrameStream for Browser streams |
 | `frame.read()` | Read next deserialized message (Promise) |
-| `frame.readV(count)` | Read multiple messages in batch - more efficient when buffered (Promise<Array>) |
+| `frame.readV(count)` | Read multiple messages in batch - more efficient when buffered (Promise<Array>) **Node.js only** |
 | `frame.write(data)` | Write single message (Promise) |
 | `frame.writeV(dataArray)` | Write multiple messages in batch - more efficient (Promise) |
 | `frame.unwrap()` | Get underlying stream (Node.js only) |
@@ -172,26 +172,90 @@ frame.close();
 
 ```bash
 Node Version: v24.11.1
-Benchmark JSON Size: 471,310 bytes
-Repeated 50 times
---------------------------------------------------------------------------------
-| Library | Size | Ratio | Serialize | Deserialize |
-| :--- | ---: | ---: | ---: | ---: |
-| JSON.stringify | 471,310 B | 100.00% | 1.89 ms | 1.66 ms |
-| @msgpack/msgpack | 420,399 B | 89.20% | 2.87 ms | 1.67 ms |
-| Msgpackr | 424,399 B | 90.05% | 0.94 ms | 1.33 ms |
-| JSON + Gzip | 21,123 B | 4.48% | 4.15 ms | 2.13 ms |
-| JSON + Brotli | 13,444 B | 2.85% | 951.27 ms | 2.16 ms |
-| JSON + Zstd (Native) | 17,862 B | 3.79% | 1.86 ms | 1.99 ms |
-| JSON + Inflate | 21,111 B | 4.48% | 3.94 ms | 1.93 ms |
-| **jserial** | **24,149 B** | **5.12%** | **0.97 ms** | **0.87 ms** |
-| **jserial (view)** | **24,149 B** | **5.12%** | **0.86 ms** | **0.04 ms** |
+Benchmark JSON Size: ~471,374 bytes
 ```
 
+| Library              |      Size |   Ratio |  Serialize | Deserialize |
+| :------------------- | --------: | ------: | ---------: | ----------: |
+| JSON.stringify       | 471,374 B | 100.00% |    1.88 ms |     1.69 ms |
+| @msgpack/msgpack     | 420,399 B |  89.19% |    2.68 ms |     1.55 ms |
+| Msgpackr             | 424,399 B |  90.03% |    1.11 ms |     1.64 ms |
+| JSON + Gzip          |  21,168 B |   4.49% |    4.49 ms |     2.11 ms |
+| JSON + Brotli        |  13,504 B |   2.86% | 954.90 ms  |     2.44 ms |
+| JSON + Zstd (Native) |  17,723 B |   3.76% |    2.38 ms |     2.07 ms |
+| JSON + Inflate       |  21,156 B |   4.49% |    3.92 ms |     1.86 ms |
+| **jserial**          |  24,041 B |   5.10% |    0.96 ms |     0.75 ms |
+| **jserial (view)**   |  24,041 B |   5.10% |    0.88 ms | **0.04 ms** |
+
 ### Summary
-*   **Compression Ratio**: Brotli (2.85%) > Zstd (3.79%) > Gzip/Inflate (4.48%) > **jserial (5.12%)**
+*   **Compression Ratio**: Brotli (2.86%) > Zstd (3.76%) > Gzip/Inflate (4.49%) > **jserial (5.10%)**
     *   `jserial` provides excellent compression close to Gzip level while being dramatically faster.
-*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.87 ms) > Msgpackr (1.33 ms) > JSON.parse (1.66 ms)
-    *   `jserial (view)` is **41x faster** than JSON.parse — zero-copy deserialization eliminates buffer allocation entirely.
-*   **Serialization Speed**: **jserial view (0.86 ms)** > Msgpackr (0.94 ms) > jserial (0.97 ms) > JSON.stringify (1.89 ms)
+*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.75 ms) > Msgpackr (1.64 ms) > JSON.parse (1.69 ms)
+    *   `jserial (view)` is **42x faster** than JSON.parse — zero-copy deserialization eliminates buffer allocation entirely.
+*   **Serialization Speed**: **jserial view (0.88 ms)** > jserial (0.96 ms) > Msgpackr (1.11 ms) > JSON.stringify (1.88 ms)
     *   `jserial (view)` is the fastest serializer, beating even Msgpackr while achieving 19x better compression.
+
+## BlockFrameStream
+
+For high-throughput scenarios where wire bandwidth matters, `BlockFrameStream` batches multiple messages into a single LZ4-compressed block using msgpackr sequential structures. This achieves dramatically smaller wire sizes at the cost of a small buffering delay.
+
+**Wire format**: `[4B decompressed_len][4B compressed_len][LZ4(sequential msgpack...)]`
+
+```javascript
+const JsonSerializer = require("jserial");
+const net = require("net");
+
+const socket = net.connect({ port: 8080 });
+
+const frame = JsonSerializer.createBlockFrameStream(socket, {
+  blockSize: 64 * 1024,  // flush when buffer reaches 64KB (default)
+  flushInterval: 10,      // auto-flush after 10ms idle (default). 0 = disabled.
+  packrOptions: {},        // additional msgpackr options (optional)
+});
+
+// Write — buffered until blockSize or flushInterval
+await frame.write({ id: 1, action: "update" });
+
+// Batch write (most efficient)
+await frame.writeV([{ id: 2 }, { id: 3 }]);
+
+// Force flush
+await frame.flush();
+
+// Batch read — up to 11x faster than read()×N
+const messages = await frame.readV(100);
+
+frame.destroy();
+```
+
+### Configuration
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `blockSize` | `number` | `65536` | Flush threshold in bytes. Smaller = lower latency, less compression. |
+| `flushInterval` | `number` | `10` | Auto-flush idle timeout (ms). `0` disables timer flushing. |
+| `packrOptions` | `object` | `{}` | Options forwarded to msgpackr `Packr`/`Unpackr`. |
+
+### BlockFrameStream vs FrameStream (1000 msgs)
+
+| Metric | FrameStream | BlockFrameStream |
+| :--- | :--- | :--- |
+| Write (1000 msgs) | 13.58 ms | **10.12 ms** (1.3x faster) |
+| `readV(N)` | 0.15 ms | **0.16 ms** (~same) |
+| `read()` individual | 0.59 ms | 1.84 ms (use `readV`) |
+| Wire size per message | 225.6 B | **27.8 B** (87.7% smaller) |
+
+> **Tip**: Use `readV(count)` with BlockFrameStream for best performance. Individual `read()` waits for the entire block to decompress.
+
+### BlockFrameStream API
+
+| Method | Description |
+| :--- | :--- |
+| `JsonSerializer.createBlockFrameStream(stream, options)` | Create a BlockFrameStream |
+| `frame.write(data)` | Write one message — buffered (Promise) |
+| `frame.writeV(dataArray)` | Write multiple messages in batch (Promise) |
+| `frame.read()` | Read next message (Promise) |
+| `frame.readV(count)` | Read `count` messages in one batch — **11x faster** than `read()×N` (Promise\<Array\>) |
+| `frame.flush()` | Force compress and send buffered messages (Promise) |
+| `frame.destroy()` | Release WASM buffers and stream resources |
+| `frame.unwrap()` | Return underlying Node.js stream |
