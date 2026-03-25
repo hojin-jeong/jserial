@@ -7,7 +7,9 @@
 
 ### Using Libraries
 
-> msgpackr, @evan/wasm/lz4
+> [msgpackr](https://github.com/kriszyp/msgpackr) — MessagePack serialization  
+> [lz4_flex](https://github.com/PSeitz/lz4_flex) (Rust → WASM) — LZ4 compression  
+> *WASM memory layout inspired by [@evan/wasm](https://github.com/nicolo-ribaudo/evan-wasm)*
 
 # Quick Start
 
@@ -166,34 +168,33 @@ frame.close();
 | `frame.unwrap()` | Get underlying stream (Node.js only) |
 | `frame.close()` | Release stream resources (Browser only) |
 | `serializeView(data)` | Zero-copy serialize — returns Uint8Array view into WASM memory |
-| `deserializeView(buffer)` | Zero-copy deserialize — accepts Uint8Array directly, skips Buffer wrapping |
+| `deserializeView(buffer)` | Deserialize — accepts Uint8Array directly, returns result without output buffer allocation |
 
 ## Benchmark
 
 ```bash
 Node Version: v24.11.1
-Benchmark JSON Size: ~471,374 bytes
+Benchmark JSON Size: ~471,357 bytes
 ```
 
 | Library              |      Size |   Ratio |  Serialize | Deserialize |
 | :------------------- | --------: | ------: | ---------: | ----------: |
-| JSON.stringify       | 471,374 B | 100.00% |    1.88 ms |     1.69 ms |
-| @msgpack/msgpack     | 420,399 B |  89.19% |    2.68 ms |     1.55 ms |
-| Msgpackr             | 424,399 B |  90.03% |    1.11 ms |     1.64 ms |
-| JSON + Gzip          |  21,168 B |   4.49% |    4.49 ms |     2.11 ms |
-| JSON + Brotli        |  13,504 B |   2.86% | 954.90 ms  |     2.44 ms |
-| JSON + Zstd (Native) |  17,723 B |   3.76% |    2.38 ms |     2.07 ms |
-| JSON + Inflate       |  21,156 B |   4.49% |    3.92 ms |     1.86 ms |
-| **jserial**          |  24,041 B |   5.10% |    0.96 ms |     0.75 ms |
-| **jserial (view)**   |  24,041 B |   5.10% |    0.88 ms | **0.04 ms** |
+| JSON.stringify       | 471,357 B | 100.00% |    2.18 ms |     1.74 ms |
+| Msgpackr             | 424,399 B |  90.04% |    1.06 ms |     1.58 ms |
+| JSON + Gzip          |  21,220 B |   4.50% |    4.38 ms |     2.14 ms |
+| JSON + Brotli        |  13,564 B |   2.88% |  971.79 ms |     2.22 ms |
+| JSON + Zstd (Native) |  17,917 B |   3.80% |    2.10 ms |     1.95 ms |
+| JSON + Inflate       |  21,208 B |   4.50% |    3.98 ms |     1.92 ms |
+| **jserial**          |  24,428 B |   5.18% |    1.03 ms |     0.76 ms |
+| **jserial (view)**   |  24,428 B |   5.18% |    0.95 ms | **0.04 ms** |
 
 ### Summary
-*   **Compression Ratio**: Brotli (2.86%) > Zstd (3.76%) > Gzip/Inflate (4.49%) > **jserial (5.10%)**
+*   **Compression Ratio**: Brotli (2.88%) > Zstd (3.80%) > Gzip/Inflate (4.50%) > **jserial (5.18%)**
     *   `jserial` provides excellent compression close to Gzip level while being dramatically faster.
-*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.75 ms) > Msgpackr (1.64 ms) > JSON.parse (1.69 ms)
-    *   `jserial (view)` is **42x faster** than JSON.parse — zero-copy deserialization eliminates buffer allocation entirely.
-*   **Serialization Speed**: **jserial view (0.88 ms)** > jserial (0.96 ms) > Msgpackr (1.11 ms) > JSON.stringify (1.88 ms)
-    *   `jserial (view)` is the fastest serializer, beating even Msgpackr while achieving 19x better compression.
+*   **Deserialization Speed**: **jserial view (0.04 ms)** > jserial (0.76 ms) > Msgpackr (1.58 ms) > JSON.parse (1.74 ms)
+    *   `jserial (view)` is **43x faster** than JSON.parse (0.04 ms vs 1.74 ms) — skips output buffer allocation by returning a WASM memory view directly.
+*   **Serialization Speed**: **jserial view (0.95 ms)** > jserial (1.03 ms) > Msgpackr (1.06 ms) > JSON.stringify (2.18 ms)
+    *   `jserial (view)` beats Msgpackr and JSON.stringify while achieving excellent compression (~5.18%).
 
 ## BlockFrameStream
 
@@ -240,10 +241,10 @@ frame.destroy();
 
 | Metric | FrameStream | BlockFrameStream |
 | :--- | :--- | :--- |
-| Write (1000 msgs) | 13.58 ms | **10.12 ms** (1.3x faster) |
-| `readV(N)` | 0.15 ms | **0.16 ms** (~same) |
-| `read()` individual | 0.59 ms | 1.84 ms (use `readV`) |
-| Wire size per message | 225.6 B | **27.8 B** (87.7% smaller) |
+| Write (1000 msgs) | 14.59 ms | **12.37 ms** (1.18x faster) |
+| `readV(N)` | 0.24 ms | **0.17 ms** (1.44x faster) |
+| `read()` individual | 1.00 ms | 2.07 ms (use `readV`) |
+| Wire size per message | 225.6 B | **27.9 B** (87.6% smaller) |
 
 > **Tip**: Use `readV(count)` with BlockFrameStream for best performance. Individual `read()` waits for the entire block to decompress.
 
@@ -255,7 +256,7 @@ frame.destroy();
 | `frame.write(data)` | Write one message — buffered (Promise) |
 | `frame.writeV(dataArray)` | Write multiple messages in batch (Promise) |
 | `frame.read()` | Read next message (Promise) |
-| `frame.readV(count)` | Read `count` messages in one batch — **11x faster** than `read()×N` (Promise\<Array\>) |
+| `frame.readV(count)` | Read `count` messages in one batch — **12x faster** than `read()×N` (Promise\<Array\>) |
 | `frame.flush()` | Force compress and send buffered messages (Promise) |
 | `frame.destroy()` | Release WASM buffers and stream resources |
 | `frame.unwrap()` | Return underlying Node.js stream |

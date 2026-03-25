@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 lz4_flex = { version = "0.11", default-features = false, features = ["checked-decode"] }
-wee_alloc = "0.4"
+talc = { version = "5", features = ["disable-realloc-in-place"] }
 
 [profile.release]
 opt-level = 3
